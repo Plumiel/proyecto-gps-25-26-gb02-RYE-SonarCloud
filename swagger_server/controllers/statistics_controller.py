@@ -11,7 +11,7 @@ from swagger_server.dbconx.db_connection import dbConectar, dbDesconectar
 from collections import Counter
 import requests
 
-
+TYA_SERVER = 'http://10.1.1.2:8001'
 
 def get_artist_metrics(artist_id):  # noqa: E501
     """Get artist metrics by ID.
@@ -23,10 +23,7 @@ def get_artist_metrics(artist_id):  # noqa: E501
 
     :rtype: ArtistMetrics
     """
-    #Pasos:
-    #1. Buscar en la base de historial del usuario todas las instancias (historial artista) y sumar la sección de escuchas --> playbacks
-    #2. Pedirle al micro de temas y autores las canciones que tengan el ID del artista y contarlas --> number of songs
-    #3. Uhm. No sé
+
     try:
         connection = dbConectar()
         cursor = connection.cursor()
@@ -41,8 +38,7 @@ def get_artist_metrics(artist_id):  # noqa: E501
         playbacks = cursor.fetchone()[0]
 
 
-        # Popularity 
-        # Playbacks de TODOS los artistas
+
         popu_sql = """
             SELECT idArtista, SUM(escuchas) AS total_playbacks
             FROM HistorialArtistas
@@ -52,38 +48,41 @@ def get_artist_metrics(artist_id):  # noqa: E501
         cursor.execute(popu_sql)
         all_artists = cursor.fetchall()  #pilla idArtista, total_playbacks
 
-        # Ranking - busca los artistas y el que coincida, lo asigna
+
         popularity_rank = None
         for idx, (a_id, _) in enumerate(all_artists, start=1):
             if a_id == artist_id:
                 popularity_rank = idx
                 break
 
-        dbDesconectar() #no necesitamos mas de la nuestra for now
-
         #Number of songs
         try:
-            # En el ae hay que poner el endpoint que me de los generos qliaos
-            response = requests.get(f"http://ae")
+            response = requests.get(f"{TYA_SERVER}/artist/{artist_id}")
             if response.status_code == 200: #if OK
-                songs = response.json()
+                artist_data = response.json()
+                songs = artist_data.get("owner_songs") or []
                 song_number= len(songs)
         except Exception as e:
             print(f"Error fetching songs from API: {e}")
             song_number = 0
 
         return ArtistMetrics(
-            id = song_id,
+            id = artist_id,
             playbacks=playbacks,
-            sales=sales,
-            downloads=downloads
+            songs=song_number,
+            popularity=popularity_rank
         )
 
     except Exception as e:
         print(f"Error getting artist metrics: {e}")
-        connection.rollback()
-        dbDesconectar()
-        return SongMetrics(playbacks=0, sales=0, downloads=0)
+        if connection:
+            connection.rollback()
+        return []
+
+    finally:
+        if connection:
+            dbDesconectar()
+
 
 
 def get_song_metrics(song_id):  # noqa: E501
@@ -96,9 +95,6 @@ def get_song_metrics(song_id):  # noqa: E501
 
     :rtype: SongMetrics
     """
-    #Pasos:
-    #1. Buscar en la base de historial de usuario (historialCanciones) todas las instancias de esta canción --> sales/downloads
-    #2. Buscar en la base de historial del usuario todas las instancias y sumar la sección de escuchas --> playbacks
     try:
         connection = dbConectar()
         cursor = connection.cursor()
@@ -119,9 +115,8 @@ def get_song_metrics(song_id):  # noqa: E501
         
         cursor.execute(sale_sql, 
                        (song_id,))
-        sales, downloads = cursor.fetchone()[0]
-
-        dbDesconectar()
+        sales= cursor.fetchone()[0]
+        downloads = sales
 
         return SongMetrics(
             id = song_id,
@@ -129,12 +124,15 @@ def get_song_metrics(song_id):  # noqa: E501
             sales=sales,
             downloads=downloads
         )
-
     except Exception as e:
         print(f"Error getting song metrics: {e}")
-        connection.rollback()
-        dbDesconectar()
-        return SongMetrics(playbacks=0, sales=0, downloads=0)
+        if connection:
+            connection.rollback()
+        return []
+
+    finally:
+        if connection:
+            dbDesconectar()
 
 
 def get_top10_artists():  # noqa: E501
@@ -145,10 +143,6 @@ def get_top10_artists():  # noqa: E501
 
     :rtype: List[ArtistRecommendations]
     """
-    #Pasos:
-    #1. Obtener los artistas con su contador de playbacks --> ordenados
-    #2. Cortar los 10 primeros 
-
     try:
         connection = dbConectar()
         cursor = connection.cursor()
@@ -163,15 +157,12 @@ def get_top10_artists():  # noqa: E501
         cursor.execute(popu_sql)
         top_artists = cursor.fetchall()  #pilla idArtista, total_playbacks
 
-        dbDesconectar()
-
-        # Ranking - busca los artistas y el que coincida, lo asigna
         top_10 = []
 
         for idx in top_artists:
             try:
                 artist_id = idx[0]
-                response = requests.get(f"http://your-api/artists/{artist_id}", timeout=5)
+                response = requests.get(f"{TYA_SERVER}/artist/{artist_id}", timeout=5)
                 if response.status_code == 200:
                     data = response.json()
                     top_10.append(
@@ -189,10 +180,13 @@ def get_top10_artists():  # noqa: E501
                 
         return top_10
     except Exception as e:
-        print(f"Error getting song metrics: {e}")
-        connection.rollback()
-        dbDesconectar()
+        print(f"Error getting top 10 artists: {e}")
+        if connection:
+            connection.rollback()
         return []
+    finally:
+        if connection:
+            dbDesconectar()
 
 
 def get_top10_songs():  # noqa: E501
@@ -217,19 +211,16 @@ def get_top10_songs():  # noqa: E501
         cursor.execute(popu_sql)
         top_songs = cursor.fetchall()  #pilla idArtista, total_playbacks
 
-        dbDesconectar()
-
-        # Ranking - busca los artistas y el que coincida, lo asigna
         top_10 = []
 
         for idx in top_songs:
             try:
                 song_id = idx[0]
-                response = requests.get(f"http://your-api/artists/{song_id}", timeout=5) #TODO cambiar
+                response = requests.get(f"{TYA_SERVER}/song/{song_id}", timeout=5) 
                 if response.status_code == 200:
                     data = response.json()
                     genre_ids=data.get("genres", [])
-                    genre_id= genre_ids[0] #no pienso cambiar el swagger otra vez, pillamos solo 1
+                    genre_id= genre_ids[0] if genre_ids else "Unknown" #no pienso cambiar el swagger otra vez, pillamos solo 1
                     top_10.append(
                         SongRecommendations(
                             id=data.get("songId", song_id),
@@ -239,14 +230,17 @@ def get_top10_songs():  # noqa: E501
                         )
                     )
                 else:
-                    top_10.append(SongRecommendations(id=song_id, name="Unknown", genre="Unkown", image=None))
+                    top_10.append(SongRecommendations(id=song_id, name="Unknown", genre="Unknown", image=None))
             except Exception as e:
                 print(f"Error fetching song info: {e}")
-                top_10.append(SongRecommendations(id=song_id, name="Unknown", genre="Unkown", image=None))
+                top_10.append(SongRecommendations(id=song_id, name="Unknown", genre="Unknown", image=None))
 
         return top_10
     except Exception as e:
-        print(f"Error getting song metrics: {e}")
-        connection.rollback()
-        dbDesconectar()
+        print(f"Error getting top 10 song: {e}")
+        if connection:
+            connection.rollback()
         return []
+    finally:
+        if connection:
+            dbDesconectar()

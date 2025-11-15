@@ -11,6 +11,8 @@ import requests
 import random
 from swagger_server.controllers.authorization_controller import is_valid_token
 
+TYA_SERVER = 'http://10.1.1.2:8001'
+
 def check_auth(required_scopes=None):
     """
     Verifica autenticación defensiva (backup de Connexion).
@@ -20,8 +22,16 @@ def check_auth(required_scopes=None):
     if not token or not is_valid_token(token):
         error = Error(code="401", message="Unauthorized: Missing or invalid token")
         return False, (error, 401)
-    return True, None
+    return True, None, token
 
+def safe_get(url, timeout=5): #Method for json fetching
+    try:
+        r = requests.get(url, timeout=timeout)
+        if r.status_code == 200:
+            return r.json()
+    except:
+        return None
+    return None
 
 def get_artist_recs():  # noqa: E501
     """Get artist recommendations.
@@ -32,88 +42,107 @@ def get_artist_recs():  # noqa: E501
     :rtype: List[ArtistRecommendations]
     """
     # Verificar autenticación defensiva
-    authorized, error_response = check_auth(required_scopes=['write:tracks'])
+    authorized, error_response, token = check_auth(required_scopes=['write:tracks'])
     if not authorized:
         return error_response
     
     if not connexion.request.is_json:
         return Error(code="400", message="Invalid JSON"), 400
     
-    #Pillar el usuario de la sesión... Revisar el historial y la vainita de los generos capah para hacerlo
-    #Y luego hay que mirar las putisimas listas de canciones/artistas.
+    user = is_valid_token(token)
+    user_id = user.idUsuario
 
     try:
         connection = dbConectar()
         cursor = connection.cursor()
 
-        # 1. Pick a random artist the user has listened to
         cursor.execute("""
-            SELECT idArtista
-            FROM HistorialArtistas
-            WHERE idUsuario = %s,
-            GROUP BY idArtista;
+        SELECT idArtista
+        FROM HistorialArtistas
+        WHERE idUsuario = %s
+        GROUP BY idArtista;
         """, (user_id,))
+
         artists = cursor.fetchall()
-        dbDesconectar()
-
         if not artists:
+            return []  # or handle "no artists" case
+
+        # Pick one random artist ID from the result list
+        random_artist_id = random.choice(artists)[0] #Picks a random artist from the user's story
+
+
+        data = safe_get(f"{TYA_SERVER}/artist/{random_artist_id}")
+        if not data:
             return []
+        
+        song_ids=data.get("songs", []) #Gets their songs' ids
+        random_songs = random.sample(song_ids, min(5, len(song_ids)))         
 
-        random_artist_id = random.choice(artists)[0]
-        print(f"Random artist: {random_artist_id}")
+        genre_list = [] #make a list for the genres
+        for song in random_songs:
+            data = safe_get(f"{TYA_SERVER}/song/{song}")
+            if not data:
+                continue
+            songs = data.get("genres", []) #get their genres
+            if not songs:
+                continue 
+            genre_list.append(songs[0]) #put it in a list
+     
+        
+        #We have a buncha genres
+        canciones = []
+        for g in genre_list:
+            try:
+                song_resp = requests.get(f"{TYA_SERVER}/song/filter", 
+                                        params={"genres": g},
+                                        timeout=5,
+                                        headers={"Accept": "application/json"}
+                                        )
+                song_resp.raise_for_status()
+                song_ids = song_resp.json() or []
+            except Exception as e:
+                print("Error calling genre filtering", e)
+                continue 
 
-        # 2. Get songs from that artist via external API...
-        try:
-            response = requests.get(f"http://songs-service/songs?artistId={random_artist_id}")
-            if response.status_code != 200:
-                print("Couldn't fetch songs for the chosen artist")
-                return []
-            artist_songs = response.json()
-        except Exception as e:
-            print(f"Error fetching songs for artist {random_artist_id}: {e}")
-            return []
+            if not song_ids:
+                continue
 
-        if not artist_songs:
-            return []
+            sampled = random.sample(song_ids, min(3, len(song_ids)))
+            canciones.extend(sampled)
+        
+        #Now we got a buncha song ids from each genre
+        artist_list = set()
+        for i in canciones:
+            data = safe_get(f"{TYA_SERVER}/song/{i}")
+            if not data:
+                continue
+            artist_list.add(data.get("artistId")) #we look for songs and then get the artists 's ids
 
-        # 3. Pick a random song from that artist
-        random_song = random.choice(artist_songs)
-        genres = random_song.get("genres", [])
-        if not genres:
-            print("⚠️ No genres found for chosen song.")
-            return []
-        genre_id = genres[0]  # pick first genre
-        print(f"🎶 Picked genre ID: {genre_id}")
-
-        # 4. Get first 10 songs from that genre
-        try:
-            genre_response = requests.get(f"http://songs-service/songs?genreId={genre_id}&limit=10")
-            if genre_response.status_code != 200:
-                print("⚠️ Couldn't fetch songs for genre")
-                return []
-            genre_songs = genre_response.json()
-        except Exception as e:
-            print(f"Error fetching songs for genre {genre_id}: {e}")
-            return []
-
-        # 5. Build SongRecommendations list
-        recs = [
-            SongRecommendations(
-                id=song.get("songId"),
-                name=song.get("title"),
-                image=song.get("cover"),
-                genre=song.get("genres", [None])[0]
+        
+        #now that we have the fucking artist id list, we get their info and pop it in the last list that we'll return
+        recs = []
+        for a in artist_list:
+            data = safe_get(f"{TYA_SERVER}/artist/{a}")
+            if not data:
+                continue
+            recs.append(
+                ArtistRecommendations (
+                    id = a,
+                    name = data.get("name", "Jane Doe"),
+                    image = data.get("imagen", None)
+                )
             )
-            for song in genre_songs
-        ]
 
         return recs
 
     except Exception as e:
-        print(f"Error generating artist recommendations: {e}")
-        connection.rollback()
-        dbDesconectar()
+        if connection:
+            connection.rollback()
         return []
+
+    finally:
+        if connection:
+            dbDesconectar()
 
 
 def get_song_recs():  # noqa: E501
@@ -125,48 +154,94 @@ def get_song_recs():  # noqa: E501
     :rtype: List[SongRecommendations]
     """
     # Verificar autenticación defensiva
-    authorized, error_response = check_auth(required_scopes=['write:tracks'])
+    authorized, error_response, token = check_auth(required_scopes=['write:tracks'])
     if not authorized:
         return error_response
     
     if not connexion.request.is_json:
         return Error(code="400", message="Invalid JSON"), 400
     
+    user = is_valid_token(token)
+    user_id = user.idUsuario
+
     try:
         connection = dbConectar()
         cursor = connection.cursor()
 
         cursor.execute("""
-        SELECT idArtista
-        FROM HistorialArtistas
-        WHERE idUsuario = %s,
-        GROUP BY idArtista;
+        SELECT idCancion
+        FROM HistorialCanciones
+        WHERE idUsuario = %s
+        GROUP BY idCancion;
         """, (user_id,))
 
-        artists = cursor.fetchall()
-        if not artists:
-            return []  # or handle "no artists" case
+        db_songs = cursor.fetchall()
+        if not db_songs:
+            return [] 
 
-        # Pick one random artist ID from the result list
-        random_artist_id = random.choice(artists)[0]
+        # db_songs is a list of tuples, e.g. [(12,), (55,), (102,)]
+        random_songs = random.sample(db_songs, min(5, len(db_songs)))  # pick up to 3
+        random_song_ids = [s[0] for s in random_songs]  # extract the IDs from tuples
 
-        try:
-            response = requests.get(f"http://your-api/artists/{song_id}", timeout=5) #pides las canciones del artista cuando este
-            if response.status_code == 200:
-                data = response.json()
-                song_ids=data.get("songs", [])
+        genre_list = set() #make a list for the genres, non-repeated
+        for song in random_song_ids:
+            data = safe_get(f"{TYA_SERVER}/song/{song}")
+            if not data:
+                continue
+            songs = data.get("genres", []) #get their genres
+            if not songs:
+                continue 
+            genre_list.add(songs[0]) #put it in a list
+     
+        
+        #We have a buncha genres
+        canciones = []
+        for g in genre_list:
+            try:
+                song_resp = requests.get(f"{TYA_SERVER}/song/filter", 
+                                        params={"genres": g},
+                                        timeout=5,
+                                        headers={"Accept": "application/json"}
+                                        )
+                song_resp.raise_for_status()
+                song_ids = song_resp.json() or []
+            except Exception as e:
+                print("Error calling genre filtering", e)
+                continue 
 
-                if len(song_ids) > 5:
-                    random_songs = random.sample(song_ids, 5)
-                else:
-                    random_songs = song_ids  # if fewer than 3, just take them all
-            else:
-                random_songs = None           
-        except Exception as e:
+            if not song_ids:
+                continue
 
-            dbDesconectar()
+            sampled = random.sample(song_ids, min(3, len(song_ids)))
+            canciones.extend(sampled)
 
-        return random_songs #hay que componerlas uerrghhh uerghgfhhf TODO
+        
+        #now that we have the fucking song id list, we get their info and pop it in the last list that we'll return
+        recs = []
+        for a in canciones:
+            data = safe_get(f"{TYA_SERVER}/song/{a}")
+            if not data:
+                continue
+            genres = data.get("genres", [])
+            if not genres:
+                continue  # or handle missing genres
+            singular_genre = genres[0]
+            recs.append(
+                SongRecommendations (
+                    id = a,
+                    name = data.get("name", "Jane Doe"),
+                    genre = singular_genre,
+                    image = data.get("cover", None)
+                )
+            )
+
+        return recs
+
     except Exception as e:
-        return False
-    return 'do some magic!'
+        if connection:
+            connection.rollback()
+        return []
+
+    finally:
+        if connection:
+            dbDesconectar()

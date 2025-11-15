@@ -7,6 +7,7 @@ https://connexion.readthedocs.io/en/latest/security.html
 
 AUTH_SERVER = 'http://10.1.1.4:8080'
 
+
 def is_valid_token(token):
     """
     Valida un token.
