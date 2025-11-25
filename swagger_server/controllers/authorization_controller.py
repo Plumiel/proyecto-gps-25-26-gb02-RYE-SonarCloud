@@ -17,7 +17,10 @@ def is_valid_token(token):
     - Integración con OAuth/IAM
     """
     try:
-        resp = requests.get(f"{AUTH_SERVER}/auth", timeout=2, headers={"Accept": "application/json", "Cookie":f"oversound_auth={token}"})
+        if not token:
+            return None
+         
+        resp = requests.get(f"{AUTH_SERVER}/auth", timeout=3, headers={"Accept": "application/json", "Cookie":f"oversound_auth={token}"})
         return resp.json() if resp.ok else None
     except Exception as e:
         print(f"Couldn't connect to SYU microservice: {e}")
