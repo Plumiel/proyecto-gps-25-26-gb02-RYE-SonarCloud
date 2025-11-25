@@ -151,8 +151,8 @@ def get_artist_recs():  # noqa: E501
             recs.append(
                 ArtistRecommendations (
                     id = a,
-                    name = data.get("name", "Jane Doe"),
-                    image = data.get("imagen", None)
+                    name = data.get("artisticName", "Jane Doe"),
+                    image = data.get("artisticImage", None)
                 )
             )
             print(f"DEBUG: Added recommendation for artist {a}")
@@ -272,7 +272,7 @@ def get_song_recs():  # noqa: E501
             recs.append(
                 SongRecommendations (
                     id = a,
-                    name = data.get("name", "Jane Doe"),
+                    name = data.get("title", "Jane Doe"),
                     genre = singular_genre,
                     image = data.get("cover", None)
                 )
