@@ -12,7 +12,7 @@ from collections import Counter
 import requests
 from swagger_server.controllers.authorization_controller import is_valid_token
 
-TYA_SERVER = 'http://10.1.1.2:8081'
+TYA_SERVER = 'http://localhost:8081'
 
 def check_auth(required_scopes=None):
     """

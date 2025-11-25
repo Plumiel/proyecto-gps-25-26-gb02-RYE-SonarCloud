@@ -11,7 +11,7 @@ from swagger_server.dbconx.db_connection import dbConectar, dbDesconectar
 from collections import Counter
 import requests
 
-TYA_SERVER = 'http://10.1.1.2:8081'
+TYA_SERVER = 'http://localhost:8081'
 
 def get_artist_metrics(artist_id):  # noqa: E501
     """Get artist metrics by ID.
