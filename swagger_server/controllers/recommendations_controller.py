@@ -103,7 +103,7 @@ def get_artist_recs():  # noqa: E501
         #     genre_list.append(songs[0]) #put it in a list
         #     print(f"DEBUG: Added genre {songs[0]}")
         # -------------------------------------------------------------------------------------
-        print(f"DEBUG: Fetching song data for genre: {TYA_SERVER}/song/{song}")
+        print(f"DEBUG: Fetching song data in list mode for genres")
         data = safe_get(f"{TYA_SERVER}/song/list?ids={','.join(map(str, random_songs))}")
         # convert json response to list of dicts
         if not data:
@@ -270,7 +270,7 @@ def get_song_recs():  # noqa: E501
         #     genre_list.add(songs[0]) #put it in a list
         #     print(f"DEBUG: Added genre {songs[0]}")
         # -------------------------------------------------------------------------------------
-        print(f"DEBUG: Fetching song data for genre: {TYA_SERVER}/song/{song}")
+        print(f"DEBUG: Fetching song data in list mode for genres")
         data = safe_get(f"{TYA_SERVER}/song/list?ids={','.join(map(str, random_songs))}")
         # convert json response to list of dicts
         if not data:
