@@ -92,17 +92,31 @@ def get_artist_recs():  # noqa: E501
         print(f"DEBUG: Selected {len(random_songs)} random songs from artist")
 
         genre_list = [] #make a list for the genres
-        for song in random_songs:
-            print(f"DEBUG: Fetching song data for genre: {TYA_SERVER}/song/{song}")
-            data = safe_get(f"{TYA_SERVER}/song/{song}")
-            if not data:
-                continue
-            songs = data.get("genres", []) #get their genres
+        # for song in random_songs:
+        #     print(f"DEBUG: Fetching song data for genre: {TYA_SERVER}/song/{song}")
+        #     data = safe_get(f"{TYA_SERVER}/song/{song}")
+        #     if not data:
+        #         continue
+        #     songs = data.get("genres", []) #get their genres
+        #     if not songs:
+        #         continue 
+        #     genre_list.append(songs[0]) #put it in a list
+        #     print(f"DEBUG: Added genre {songs[0]}")
+        # -------------------------------------------------------------------------------------
+        print(f"DEBUG: Fetching song data for genre: {TYA_SERVER}/song/{song}")
+        data = safe_get(f"{TYA_SERVER}/song/list?ids={','.join(map(str, random_songs))}")
+        # convert json response to list of dicts
+        if not data:
+            print("DEBUG: Failed to fetch song list data, returning empty list")
+            return []
+        
+        for song in data:
+            songs = song.get("genres", []) #get their genres
             if not songs:
                 continue 
             genre_list.append(songs[0]) #put it in a list
             print(f"DEBUG: Added genre {songs[0]}")
-     
+        # -------------------------------------------------------------------------------------
         print(f"DEBUG: Collected genres: {genre_list}")
         #We have a buncha genres
         canciones = []
@@ -131,30 +145,54 @@ def get_artist_recs():  # noqa: E501
         print(f"DEBUG: Total songs collected: {len(canciones)}")
         #Now we got a buncha song ids from each genre
         artist_list = set()
-        for i in canciones:
-            print(f"DEBUG: Fetching artist ID for song {i}")
-            data = safe_get(f"{TYA_SERVER}/song/{i}")
-            if not data:
-                continue
-            artist_list.add(data.get("artistId")) #we look for songs and then get the artists 's ids
-            print(f"DEBUG: Added artist ID {data.get('artistId')}")
+        data = safe_get(f"{TYA_SERVER}/song/list?ids={','.join(map(str, canciones))}")
+        if not data:
+            print("DEBUG: Failed to fetch song list data, returning empty list")
+            return []
+        
+        # for i in data:
+        #     print(f"DEBUG: Fetching artist ID for song {i}")
+        #     data = safe_get(f"{TYA_SERVER}/song/{i}")
+        #     if not data:
+        #         continue
+        #     artist_list.add(i.get("artistId")) #we look for songs and then get the artists 's ids
+        #     print(f"DEBUG: Added artist ID {data.get('artistId')}")
+
+                #Now we got a buncha song ids from each genre
+        for i in data:
+            artist_list.add(i.get("artistId")) #we look for songs and then get the artists 's ids
+            print(f"DEBUG: Added artist ID {i.get('artistId')}")
 
         
         print(f"DEBUG: Unique artists found: {len(artist_list)}")
         #now that we have the fucking artist id list, we get their info and pop it in the last list that we'll return
         recs = []
-        for a in artist_list:
-            print(f"DEBUG: Fetching artist info for ID {a}")
-            data = safe_get(f"{TYA_SERVER}/artist/{a}")
-            if not data:
-                continue
+        data = safe_get(f"{TYA_SERVER}/artist/list?ids={','.join(map(str, artist_list))}")
+        if not data:    
+            print("DEBUG: Failed to fetch artist list data, returning empty list")
+            return []
+        
+        for a in data:
             recs.append(
                 ArtistRecommendations (
-                    id = a,
-                    name = data.get("artisticName", "Jane Doe"),
-                    image = data.get("artisticImage", None)
+                    id = a.get("artistId", 0),
+                    name = a.get("artisticName", "Jane Doe"),
+                    image = a.get("artisticImage", None)
                 )
             )
+            print(f"DEBUG: Added recommendation for artist {a}")
+        # for a in artist_list:
+        #     print(f"DEBUG: Fetching artist info for ID {a}")
+        #     data = safe_get(f"{TYA_SERVER}/artist/{a}")
+        #     if not data:
+        #         continue
+        #     recs.append(
+        #         ArtistRecommendations (
+        #             id = a,
+        #             name = data.get("artisticName", "Jane Doe"),
+        #             image = data.get("artisticImage", None)
+        #         )
+        #     )
             print(f"DEBUG: Added recommendation for artist {a}")
 
         print(f"DEBUG: Returning {len(recs)} artist recommendations")
@@ -221,17 +259,31 @@ def get_song_recs():  # noqa: E501
         print(f"DEBUG: Selected {len(random_song_ids)} random songs")
 
         genre_list = set() #make a list for the genres, non-repeated
-        for song in random_song_ids:
-            print(f"DEBUG: Fetching genres for song {song}")
-            data = safe_get(f"{TYA_SERVER}/song/{song}")
-            if not data:
-                continue
-            songs = data.get("genres", []) #get their genres
+        # for song in random_song_ids:
+        #     print(f"DEBUG: Fetching genres for song {song}")
+        #     data = safe_get(f"{TYA_SERVER}/song/{song}")
+        #     if not data:
+        #         continue
+        #     songs = data.get("genres", []) #get their genres
+        #     if not songs:
+        #         continue 
+        #     genre_list.add(songs[0]) #put it in a list
+        #     print(f"DEBUG: Added genre {songs[0]}")
+        # -------------------------------------------------------------------------------------
+        print(f"DEBUG: Fetching song data for genre: {TYA_SERVER}/song/{song}")
+        data = safe_get(f"{TYA_SERVER}/song/list?ids={','.join(map(str, random_songs))}")
+        # convert json response to list of dicts
+        if not data:
+            print("DEBUG: Failed to fetch song list data, returning empty list")
+            return []
+        
+        for song in data:
+            songs = song.get("genres", []) #get their genres
             if not songs:
                 continue 
             genre_list.add(songs[0]) #put it in a list
             print(f"DEBUG: Added genre {songs[0]}")
-     
+        # -------------------------------------------------------------------------------------
         print(f"DEBUG: Collected unique genres: {genre_list}")
         #We have a buncha genres
         canciones = []
@@ -260,25 +312,46 @@ def get_song_recs():  # noqa: E501
         print(f"DEBUG: Total songs collected: {len(canciones)}")
         #now that we have the fucking song id list, we get their info and pop it in the last list that we'll return
         recs = []
-        for a in canciones:
-            print(f"DEBUG: Fetching song info for ID {a}")
-            data = safe_get(f"{TYA_SERVER}/song/{a}")
-            if not data:
-                continue
-            genres = data.get("genres", [])
+        # for a in canciones:
+        #     print(f"DEBUG: Fetching song info for ID {a}")
+        #     data = safe_get(f"{TYA_SERVER}/song/{a}")
+        #     if not data:
+        #         continue
+        #     genres = data.get("genres", [])
+        #     if not genres:
+        #         continue  # or handle missing genres
+        #     singular_genre = genres[0]
+        #     recs.append(
+        #         SongRecommendations (
+        #             id = a,
+        #             name = data.get("title", "Jane Doe"),
+        #             genre = singular_genre,
+        #             image = data.get("cover", None)
+        #         )
+        #     )
+        #     print(f"DEBUG: Added recommendation for song {a}")
+        # -------------------------------------------------------------------------------------
+        print(f"DEBUG: Fetching song info for collected song IDs")
+        data = safe_get(f"{TYA_SERVER}/song/list?ids={','.join(map(str, canciones))}")
+        if not data:    
+            print("DEBUG: Failed to fetch song list data, returning empty list")
+            return []
+        
+        for song in data:
+            genres = song.get("genres", [])
             if not genres:
                 continue  # or handle missing genres
             singular_genre = genres[0]
             recs.append(
                 SongRecommendations (
-                    id = a,
-                    name = data.get("title", "Jane Doe"),
+                    id = song.get("id"),
+                    name = song.get("title", "Jane Doe"),
                     genre = singular_genre,
-                    image = data.get("cover", None)
+                    image = song.get("cover", None)
                 )
             )
-            print(f"DEBUG: Added recommendation for song {a}")
-
+            print(f"DEBUG: Added recommendation for song {song.get('id')}")
+        # -------------------------------------------------------------------------------------
         print(f"DEBUG: Returning {len(recs)} song recommendations")
         return recs
 
