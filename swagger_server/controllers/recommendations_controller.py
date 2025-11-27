@@ -24,14 +24,33 @@ def check_auth(required_scopes=None):
         return False, (error, 401)
     return True, None, token
 
-def safe_get(url, timeout=5): #Method for json fetching
+def safe_get(url, timeout=10): #Method for json fetching - Aumentado timeout a 10s
     try:
+        print(f"DEBUG: Requesting URL: {url}")
         r = requests.get(url, timeout=timeout)
+        print(f"DEBUG: Response status code: {r.status_code}")
+        print(f"DEBUG: Response content preview: {r.text[:200] if r.text else 'Empty'}")
+        
         if r.status_code == 200:
-            return r.json()
-    except:
+            try:
+                json_data = r.json()
+                print(f"DEBUG: Successfully parsed JSON, type: {type(json_data)}, length: {len(json_data) if isinstance(json_data, (list, dict)) else 'N/A'}")
+                return json_data
+            except ValueError as e:
+                print(f"DEBUG: JSON parsing error: {e}")
+                return None
+        else:
+            print(f"DEBUG: Non-200 status code received: {r.status_code}")
+            return None
+    except requests.exceptions.Timeout as e:
+        print(f"DEBUG: Request timeout: {e}")
         return None
-    return None
+    except requests.exceptions.RequestException as e:
+        print(f"DEBUG: Request exception: {e}")
+        return None
+    except Exception as e:
+        print(f"DEBUG: Unexpected error in safe_get: {e}")
+        return None
 
 def get_artist_recs():  # noqa: E501
     """Get artist recommendations.
@@ -88,8 +107,15 @@ def get_artist_recs():  # noqa: E501
             return []
         
         song_ids=data.get("owner_songs", []) #Gets their songs' ids
+        print(f"DEBUG: Raw song_ids type and content: {type(song_ids)}, {song_ids[:3] if song_ids else 'empty'}")
+        
+        # If song_ids contains tuples, extract the first element
+        if song_ids and isinstance(song_ids[0], (tuple, list)):
+            song_ids = [s[0] if isinstance(s, (tuple, list)) else s for s in song_ids]
+            print(f"DEBUG: Extracted IDs from tuples: {song_ids[:3]}")
+        
         random_songs = random.sample(song_ids, min(5, len(song_ids)))
-        print(f"DEBUG: Selected {len(random_songs)} random songs from artist")
+        print(f"DEBUG: Selected {len(random_songs)} random songs from artist: {random_songs}")
 
         genre_list = [] #make a list for the genres
         # for song in random_songs:
@@ -118,6 +144,9 @@ def get_artist_recs():  # noqa: E501
             print(f"DEBUG: Added genre {songs[0]}")
         # -------------------------------------------------------------------------------------
         print(f"DEBUG: Collected genres: {genre_list}")
+        # Limitar a los primeros 3 géneros para evitar timeouts
+        genre_list = genre_list[:3]
+        print(f"DEBUG: Limited to first 3 genres: {genre_list}")
         #We have a buncha genres
         canciones = []
         for g in genre_list:
@@ -131,24 +160,39 @@ def get_artist_recs():  # noqa: E501
                 song_resp.raise_for_status()
                 song_ids = song_resp.json() or []
                 print(f"DEBUG: Found {len(song_ids)} songs for genre {g}")
+                print(f"DEBUG: song_ids type and sample: {type(song_ids)}, {song_ids[:2] if song_ids else 'empty'}")
+                
+                # If song_ids contains nested structures, flatten them
+                if song_ids and isinstance(song_ids[0], (tuple, list)):
+                    song_ids = [s[0] if isinstance(s, (tuple, list)) else s for s in song_ids]
+                    print(f"DEBUG: Flattened song_ids: {song_ids[:2]}")
             except Exception as e:
-                print("Error calling genre filtering", e)
+                print(f"DEBUG: Error calling genre filtering for {g}: {e}")
                 continue 
 
             if not song_ids:
                 continue
 
-            sampled = random.sample(song_ids, min(3, len(song_ids)))
+            sampled = random.sample(song_ids, min(2, len(song_ids)))  # Reducido de 3 a 2 para mejorar rendimiento
             canciones.extend(sampled)
             print(f"DEBUG: Added {len(sampled)} songs from genre {g}")
         
         print(f"DEBUG: Total songs collected: {len(canciones)}")
+        print(f"DEBUG: Sample canciones: {canciones[:5] if canciones else 'empty'}")
+        
+        if not canciones:
+            print("DEBUG: No songs to fetch, returning empty list")
+            return []
+        
         #Now we got a buncha song ids from each genre
         artist_list = set()
         data = safe_get(f"{TYA_SERVER}/song/list?ids={','.join(map(str, canciones))}")
         if not data:
             print("DEBUG: Failed to fetch song list data, returning empty list")
             return []
+        
+        print(f"DEBUG: Received {len(data)} songs from song/list endpoint")
+        print(f"DEBUG: Sample song data: {data[0] if data else 'empty'}")
         
         # for i in data:
         #     print(f"DEBUG: Fetching artist ID for song {i}")
@@ -160,11 +204,21 @@ def get_artist_recs():  # noqa: E501
 
                 #Now we got a buncha song ids from each genre
         for i in data:
-            artist_list.add(i.get("artistId")) #we look for songs and then get the artists 's ids
-            print(f"DEBUG: Added artist ID {i.get('artistId')}")
+            artist_id = i.get("artistId")
+            if artist_id is not None:  # Filter out None values
+                artist_list.add(artist_id)
+                print(f"DEBUG: Added artist ID {artist_id}")
+            else:
+                print(f"DEBUG: Song {i.get('id', 'unknown')} has no artistId")
 
         
         print(f"DEBUG: Unique artists found: {len(artist_list)}")
+        print(f"DEBUG: Artist list: {list(artist_list)[:10]}")
+        
+        if not artist_list:
+            print("DEBUG: No artists to fetch, returning empty list")
+            return []
+        
         #now that we have the fucking artist id list, we get their info and pop it in the last list that we'll return
         recs = []
         data = safe_get(f"{TYA_SERVER}/artist/list?ids={','.join(map(str, artist_list))}")
@@ -172,28 +226,29 @@ def get_artist_recs():  # noqa: E501
             print("DEBUG: Failed to fetch artist list data, returning empty list")
             return []
         
+        print(f"DEBUG: Received {len(data)} artists from artist/list endpoint")
+        print(f"DEBUG: Sample artist data: {data[0] if data else 'empty'}")
+        
         for a in data:
-            recs.append(
-                ArtistRecommendations (
-                    id = a.get("artistId", 0),
-                    name = a.get("artisticName", "Jane Doe"),
-                    image = a.get("artisticImage", None)
+            # El endpoint devuelve un objeto con datos de usuario + artistId
+            artist_id = a.get("artistId", 0)
+            # Usar 'username' o 'name' del usuario como nombre del artista
+            artist_name = a.get("username", a.get("name", "Unknown Artist"))
+            artist_image = a.get("image", None)  # 'image' en lugar de 'artisticImage'
+            
+            print(f"DEBUG: Processing artist - ID: {artist_id}, Name: {artist_name}")
+            
+            if artist_id:  # Solo agregar si tiene artistId válido
+                recs.append(
+                    ArtistRecommendations (
+                        id = artist_id,
+                        name = artist_name,
+                        image = artist_image
+                    )
                 )
-            )
-            print(f"DEBUG: Added recommendation for artist {a}")
-        # for a in artist_list:
-        #     print(f"DEBUG: Fetching artist info for ID {a}")
-        #     data = safe_get(f"{TYA_SERVER}/artist/{a}")
-        #     if not data:
-        #         continue
-        #     recs.append(
-        #         ArtistRecommendations (
-        #             id = a,
-        #             name = data.get("artisticName", "Jane Doe"),
-        #             image = data.get("artisticImage", None)
-        #         )
-        #     )
-            print(f"DEBUG: Added recommendation for artist {a}")
+                print(f"DEBUG: Added recommendation for artist {artist_name} (ID: {artist_id})")
+            else:
+                print(f"DEBUG: Skipping entry without valid artistId: {a}")
 
         print(f"DEBUG: Returning {len(recs)} artist recommendations")
         return recs
@@ -271,7 +326,7 @@ def get_song_recs():  # noqa: E501
         #     print(f"DEBUG: Added genre {songs[0]}")
         # -------------------------------------------------------------------------------------
         print(f"DEBUG: Fetching song data in list mode for genres")
-        data = safe_get(f"{TYA_SERVER}/song/list?ids={','.join(map(str, random_songs))}")
+        data = safe_get(f"{TYA_SERVER}/song/list?ids={','.join(map(str, random_song_ids))}")
         # convert json response to list of dicts
         if not data:
             print("DEBUG: Failed to fetch song list data, returning empty list")
@@ -285,12 +340,15 @@ def get_song_recs():  # noqa: E501
             print(f"DEBUG: Added genre {songs[0]}")
         # -------------------------------------------------------------------------------------
         print(f"DEBUG: Collected unique genres: {genre_list}")
+        # Limitar a los primeros 3 géneros para evitar timeouts (convertir set a lista para slicing)
+        genre_list = list(genre_list)[:3]
+        print(f"DEBUG: Limited to first 3 genres: {genre_list}")
         #We have a buncha genres
         canciones = []
         for g in genre_list:
             try:
                 print(f"DEBUG: Filtering songs by genre {g}")
-                song_resp = requests.get(f"{TYA_SERVER}/song/filter", 
+                song_resp = requests.get(f"{TYA_SERVER}/song/filter",
                                         params={"genres": g},
                                         timeout=5,
                                         headers={"Accept": "application/json"}
@@ -305,7 +363,7 @@ def get_song_recs():  # noqa: E501
             if not song_ids:
                 continue
 
-            sampled = random.sample(song_ids, min(3, len(song_ids)))
+            sampled = random.sample(song_ids, min(2, len(song_ids)))  # Reducido de 3 a 2 para mejorar rendimiento
             canciones.extend(sampled)
             print(f"DEBUG: Added {len(sampled)} songs from genre {g}")
 
