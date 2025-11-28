@@ -402,13 +402,13 @@ def get_song_recs():  # noqa: E501
             singular_genre = genres[0]
             recs.append(
                 SongRecommendations (
-                    id = song.get("id"),
+                    id = song.get("songId"),
                     name = song.get("title", "Jane Doe"),
                     genre = singular_genre,
                     image = song.get("cover", None)
                 )
             )
-            print(f"DEBUG: Added recommendation for song {song.get('id')}")
+            print(f"DEBUG: Added recommendation for song {song.get('songId')}")
         # -------------------------------------------------------------------------------------
         print(f"DEBUG: Returning {len(recs)} song recommendations")
         return recs
