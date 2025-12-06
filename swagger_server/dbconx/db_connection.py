@@ -1,7 +1,7 @@
 import psycopg2 as DB
 from psycopg2.extensions import connection
 
-def dbConectar() -> connection:
+def db_conectar() -> connection:
     ip = "10.1.1.1"
     puerto = 5432
     basedatos = "rye"
@@ -22,7 +22,7 @@ def dbConectar() -> connection:
         print(error)
         return None
 
-def dbDesconectar(conexion):
+def db_desconectar(conexion):
     print("---dbDesconectar---")
     try:
         conexion.close()
