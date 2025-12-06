@@ -32,6 +32,8 @@ def delete_artist(artist_id):
         print("DEBUG: Authentication failed")
         return error_response
     
+    connection = None
+    
     try:
         print("DEBUG: Connecting to database")
         connection = db_conectar()
@@ -95,6 +97,8 @@ def delete_song(song_id):
     if not authorized:
         print("DEBUG: Authentication failed")
         return error_response
+    
+    connection = None
     
     try:
         print("DEBUG: Connecting to database")
@@ -177,6 +181,8 @@ def get_genre_count():  # noqa: E501
     user_id = user["userId"]
     print(f"DEBUG: User ID: {user_id}")
 
+    connection = None
+
     try:
         print("DEBUG: Connecting to database")
         connection = db_conectar()
@@ -256,6 +262,8 @@ def get_user_metrics():  # noqa: E501
     user = is_valid_token(token)
     user_id = user["userId"]
     print(f"DEBUG: User ID: {user_id}")
+
+    connection = None
 
     try:
         print("DEBUG: Connecting to database")
@@ -356,6 +364,8 @@ def new_song_history(body):  # noqa: E501
     user_id = user["userId"]
     print(f"DEBUG: User ID: {user_id}")
 
+    connection = None
+
     try:
         print("DEBUG: Connecting to database")
         connection = db_conectar()
@@ -419,6 +429,8 @@ def post_artist_history(body):  # noqa: E501
     user = is_valid_token(token)
     user_id = user["userId"]
     print(f"DEBUG: User ID: {user_id}")
+
+    connection = None
 
     try: 
         print("DEBUG: Connecting to database")
