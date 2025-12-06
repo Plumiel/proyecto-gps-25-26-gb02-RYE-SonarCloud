@@ -14,6 +14,8 @@ from swagger_server.controllers.authorization_controller import is_valid_token
 
 TYA_SERVER = 'http://localhost:8081'
 
+INTERNAL_SERVER_ERROR = "Internal server error"
+
 def check_auth(required_scopes=None):
     """
     Verifica autenticación defensiva (backup de Connexion).
@@ -57,7 +59,7 @@ def delete_artist(artist_id):
         print(f"Error deleting artist history: {e}")
         if connection:
             connection.rollback()
-        return Error(code="500", message="Internal server error"), 500
+        return Error(code="500", message= INTERNAL_SERVER_ERROR), 500
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
@@ -123,7 +125,7 @@ def delete_song(song_id):
         print(f"Error deleting song history: {e}")
         if connection:
             connection.rollback()
-        return Error(code="500", message="Internal server error"), 500
+        return Error(code="500", message= INTERNAL_SERVER_ERROR), 500
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
@@ -232,7 +234,7 @@ def get_genre_count():  # noqa: E501
         print(f"Error deleting artist history: {e}")
         if connection:
             connection.rollback()
-        return Error(code="500", message="Internal server error"), 500
+        return Error(code="500", message= INTERNAL_SERVER_ERROR), 500
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
@@ -329,7 +331,7 @@ def get_user_metrics():  # noqa: E501
         print(f"Error deleting artist history: {e}")
         if connection:
             connection.rollback()
-        return Error(code="500", message="Internal server error"), 500
+        return Error(code="500", message= INTERNAL_SERVER_ERROR), 500
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
@@ -396,7 +398,7 @@ def new_song_history(body):  # noqa: E501
         print(f"Error adding song history: {e}")
         if connection:
             connection.rollback()
-        return Error(code="500", message="Internal server error"), 500
+        return Error(code="500", message= INTERNAL_SERVER_ERROR), 500
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
@@ -461,7 +463,7 @@ def post_artist_history(body):  # noqa: E501
         print(f"Error adding artist history: {e}")
         if connection:
             connection.rollback()
-        return Error(code="500", message="Internal server error"), 500
+        return Error(code="500", message= INTERNAL_SERVER_ERROR), 500
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
