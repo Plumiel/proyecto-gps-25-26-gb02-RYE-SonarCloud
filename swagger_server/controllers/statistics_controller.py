@@ -26,6 +26,8 @@ def get_artist_metrics(artist_id):  # noqa: E501
     """
     print(f"DEBUG: Starting get_artist_metrics with artist_id: {artist_id}")
 
+    connection = None
+
     try:
         print("DEBUG: Connecting to database")
         connection = db_conectar()
@@ -110,6 +112,9 @@ def get_song_metrics(song_id):  # noqa: E501
     :rtype: SongMetrics
     """
     print(f"DEBUG: Starting get_song_metrics with song_id: {song_id}")
+
+    connection = None
+
     try:
         print("DEBUG: Connecting to database")
         connection = db_conectar()
@@ -231,6 +236,8 @@ def get_top10_songs():  # noqa: E501
     :rtype: List[SongRecommendations]
     """
     print("DEBUG: Starting get_top10_songs")
+
+    connection = None
     try:
         print("DEBUG: Connecting to database")
         connection = db_conectar()

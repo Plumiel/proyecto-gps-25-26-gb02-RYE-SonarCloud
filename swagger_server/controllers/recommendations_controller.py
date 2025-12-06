@@ -76,6 +76,8 @@ def get_artist_recs():  # noqa: E501
     user_id = user["userId"]
     print(f"DEBUG: User ID: {user_id}")
 
+    connection = None
+
     try:
         print("DEBUG: Connecting to database")
         connection = db_conectar()
@@ -288,6 +290,8 @@ def get_song_recs():  # noqa: E501
     user = is_valid_token(token)
     user_id = user["userId"]
     print(f"DEBUG: User ID: {user_id}")
+
+    connection = None
 
     try:
         print("DEBUG: Connecting to database")

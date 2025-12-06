@@ -16,7 +16,7 @@ def db_conectar() -> connection:
     
     if not all([ip, basedatos, usuario, contrasena]):
         print("Error: Missing environment variables.")
-        return None
+        raise ValueError("Error: Missing environment variables for the Database")
 
     try:
         conexion = DB.connect(
@@ -31,8 +31,7 @@ def db_conectar() -> connection:
         return conexion
     except DB.DatabaseError as error:
         print("Error en la conexión")
-        print(error)
-        return None
+        raise error
 
 def db_desconectar(conexion):
     print("---dbDesconectar---")
