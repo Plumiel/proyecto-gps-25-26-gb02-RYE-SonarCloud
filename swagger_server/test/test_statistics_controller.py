@@ -22,7 +22,7 @@ class TestStatisticsController(BaseTestCase):
         Get artist metrics by ID.
         """
         response = self.client.open(
-            '/statistics/metrics/artist/{artistId}'.format(artist_id=56),
+            '/statistics/metrics/artist/{artistId}'.format(artistId=56),
             method='GET')
         self.assert200(response,
                        'Response body is : ' + response.data.decode('utf-8'))
@@ -33,7 +33,7 @@ class TestStatisticsController(BaseTestCase):
         Get song metrics by ID.
         """
         response = self.client.open(
-            '/statistics/metrics/song/{songId}'.format(song_id=56),
+            '/statistics/metrics/song/{songId}'.format(songId=56),
             method='GET')
         self.assert200(response,
                        'Response body is : ' + response.data.decode('utf-8'))
