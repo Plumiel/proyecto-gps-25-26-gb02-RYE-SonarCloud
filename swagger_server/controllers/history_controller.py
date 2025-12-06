@@ -7,7 +7,7 @@ from swagger_server.models.identifier import Identifier
 from swagger_server.models.user_genres import UserGenres  # noqa: E501
 from swagger_server.models.user_metrics import UserMetrics  # noqa: E501
 from swagger_server import util
-from swagger_server.dbconx.db_connection import dbConectar, dbDesconectar
+from swagger_server.dbconx.db_connection import db_conectar, db_desconectar
 from collections import Counter
 import requests
 from swagger_server.controllers.authorization_controller import is_valid_token
@@ -34,7 +34,7 @@ def delete_artist(artist_id):
     
     try:
         print("DEBUG: Connecting to database")
-        connection = dbConectar()
+        connection = db_conectar()
         cursor = connection.cursor()
 
         user = is_valid_token(token)
@@ -59,7 +59,7 @@ def delete_artist(artist_id):
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
-            dbDesconectar(connection)
+            db_desconectar(connection)
 
 def delete_artist_history(body):  # noqa: E501
     """Deletes an artist from user&#x27;s history.
@@ -98,7 +98,7 @@ def delete_song(song_id):
     
     try:
         print("DEBUG: Connecting to database")
-        connection = dbConectar()
+        connection = db_conectar()
         cursor = connection.cursor()
 
         user = is_valid_token(token)
@@ -123,7 +123,7 @@ def delete_song(song_id):
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
-            dbDesconectar(connection)
+            db_desconectar(connection)
 
 def delete_song_history(body):  # noqa: E501
     """Deletes a song from user&#x27;s history.
@@ -179,7 +179,7 @@ def get_genre_count():  # noqa: E501
 
     try:
         print("DEBUG: Connecting to database")
-        connection = dbConectar()
+        connection = db_conectar()
         cursor = connection.cursor()
 
        #Getting the songs the user's been listening to
@@ -230,7 +230,7 @@ def get_genre_count():  # noqa: E501
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
-            dbDesconectar(connection)
+            db_desconectar(connection)
 
 
 def get_user_metrics():  # noqa: E501
@@ -259,7 +259,7 @@ def get_user_metrics():  # noqa: E501
 
     try:
         print("DEBUG: Connecting to database")
-        connection = dbConectar()
+        connection = db_conectar()
         cursor = connection.cursor()
 
         # Top song
@@ -325,7 +325,7 @@ def get_user_metrics():  # noqa: E501
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
-            dbDesconectar(connection)
+            db_desconectar(connection)
 
 
 
@@ -358,7 +358,7 @@ def new_song_history(body):  # noqa: E501
 
     try:
         print("DEBUG: Connecting to database")
-        connection = dbConectar()
+        connection = db_conectar()
         cursor = connection.cursor()
 
         print(connexion.request.get_json())
@@ -390,7 +390,7 @@ def new_song_history(body):  # noqa: E501
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
-            dbDesconectar(connection)
+            db_desconectar(connection)
 
 
 def post_artist_history(body):  # noqa: E501
@@ -422,7 +422,7 @@ def post_artist_history(body):  # noqa: E501
 
     try: 
         print("DEBUG: Connecting to database")
-        connection = dbConectar()
+        connection = db_conectar()
         cursor = connection.cursor()
 
         if connexion.request.is_json:
@@ -453,5 +453,5 @@ def post_artist_history(body):  # noqa: E501
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
-            dbDesconectar(connection)
+            db_desconectar(connection)
 

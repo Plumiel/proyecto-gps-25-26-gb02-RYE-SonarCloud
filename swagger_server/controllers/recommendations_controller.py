@@ -5,7 +5,7 @@ from swagger_server.models.artist_recommendations import ArtistRecommendations  
 from swagger_server.models.error import Error  # noqa: E501
 from swagger_server.models.song_recommendations import SongRecommendations  # noqa: E501
 from swagger_server import util
-from swagger_server.dbconx.db_connection import dbConectar, dbDesconectar
+from swagger_server.dbconx.db_connection import db_conectar, db_desconectar
 from collections import Counter
 import requests
 import random
@@ -78,7 +78,7 @@ def get_artist_recs():  # noqa: E501
 
     try:
         print("DEBUG: Connecting to database")
-        connection = dbConectar()
+        connection = db_conectar()
         cursor = connection.cursor()
 
         print("DEBUG: Fetching user's artist history")
@@ -262,7 +262,7 @@ def get_artist_recs():  # noqa: E501
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
-            dbDesconectar(connection)
+            db_desconectar(connection)
 
 
 def get_song_recs():  # noqa: E501
@@ -291,7 +291,7 @@ def get_song_recs():  # noqa: E501
 
     try:
         print("DEBUG: Connecting to database")
-        connection = dbConectar()
+        connection = db_conectar()
         cursor = connection.cursor()
 
         print("DEBUG: Fetching user's song history")
@@ -422,4 +422,4 @@ def get_song_recs():  # noqa: E501
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
-            dbDesconectar(connection)
+            db_desconectar(connection)

@@ -7,7 +7,7 @@ from swagger_server.models.error import Error  # noqa: E501
 from swagger_server.models.song_metrics import SongMetrics  # noqa: E501
 from swagger_server.models.song_recommendations import SongRecommendations  # noqa: E501
 from swagger_server import util
-from swagger_server.dbconx.db_connection import dbConectar, dbDesconectar
+from swagger_server.dbconx.db_connection import db_conectar, db_desconectar
 from collections import Counter
 from .history_controller import delete_artist, delete_song
 import requests
@@ -28,7 +28,7 @@ def get_artist_metrics(artist_id):  # noqa: E501
 
     try:
         print("DEBUG: Connecting to database")
-        connection = dbConectar()
+        connection = db_conectar()
         cursor = connection.cursor()
 
         #Playbacks
@@ -95,7 +95,7 @@ def get_artist_metrics(artist_id):  # noqa: E501
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
-            dbDesconectar(connection)
+            db_desconectar(connection)
 
 
 
@@ -112,7 +112,7 @@ def get_song_metrics(song_id):  # noqa: E501
     print(f"DEBUG: Starting get_song_metrics with song_id: {song_id}")
     try:
         print("DEBUG: Connecting to database")
-        connection = dbConectar()
+        connection = db_conectar()
         cursor = connection.cursor()
 
         #Playbacks
@@ -155,7 +155,7 @@ def get_song_metrics(song_id):  # noqa: E501
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
-            dbDesconectar(connection)
+            db_desconectar(connection)
 
 
 def get_top10_artists():  # noqa: E501
@@ -169,7 +169,7 @@ def get_top10_artists():  # noqa: E501
     print("DEBUG: Starting get_top10_artists")
     try:
         print("DEBUG: Connecting to database")
-        connection = dbConectar()
+        connection = db_conectar()
         cursor = connection.cursor()
 
         print("DEBUG: Executing top artists query")
@@ -219,7 +219,7 @@ def get_top10_artists():  # noqa: E501
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
-            dbDesconectar(connection)
+            db_desconectar(connection)
 
 
 def get_top10_songs():  # noqa: E501
@@ -233,7 +233,7 @@ def get_top10_songs():  # noqa: E501
     print("DEBUG: Starting get_top10_songs")
     try:
         print("DEBUG: Connecting to database")
-        connection = dbConectar()
+        connection = db_conectar()
         cursor = connection.cursor()
 
         print("DEBUG: Executing top songs query")
@@ -286,4 +286,4 @@ def get_top10_songs():  # noqa: E501
     finally:
         if connection:
             print("DEBUG: Disconnecting from database")
-            dbDesconectar(connection)
+            db_desconectar(connection)

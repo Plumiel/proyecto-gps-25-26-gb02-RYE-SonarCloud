@@ -1,0 +1,6 @@
+{
+    "sonarlint.connectedMode.project": {
+        "connectionId": "plumiel",
+        "projectKey": "Plumiel_proyecto-gps-25-26-gb02-RYE-SonarCloud"
+    }
+}
